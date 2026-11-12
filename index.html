@@ -1,77 +1,117 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Hit Him</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hit Derpy</title>
+
 <style>
 body{
     margin:0;
-    background:#222;
     overflow:hidden;
-    font-family:Arial;
+    background:#87ceeb;
+    font-family:Arial,sans-serif;
 }
 canvas{
     display:block;
     margin:auto;
-    background:#6cb7ff;
+    background:linear-gradient(#87ceeb,#cdefff);
+}
+#info{
+    position:absolute;
+    top:15px;
+    left:15px;
+    font-size:22px;
+    color:white;
+    font-weight:bold;
+    text-shadow:2px 2px 4px black;
 }
 </style>
 </head>
 <body>
 
-<canvas id="game" width="1000" height="600"></canvas>
+<div id="info">
+WASD - Move<br>
+Click - Attack
+</div>
+
+<canvas id="game" width="1200" height="700"></canvas>
+
+<audio id="cry" src="babycry.mp3" preload="auto"></audio>
 
 <script>
+
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
+const cry=document.getElementById("cry");
 
-const enemyImg=new Image();
-enemyImg.src="derpy.png";
+const derpy=new Image();
+derpy.src="derpy.png";
+
+const keys={};
+
+document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+let player={
+    x:200,
+    y:550,
+    w:40,
+    h:70,
+    speed:6
+};
+
+let sword={
+    angle:-0.8,
+    swinging:false,
+    timer:0
+};
 
 let enemy={
-    x:650,
-    y:300,
+    x:850,
+    y:420,
     w:220,
     h:220,
     hp:100,
     flash:0
 };
 
-let swordAngle=-1.2;
-let swinging=false;
-let swingTime=0;
-
 let particles=[];
 
 canvas.onclick=()=>{
-    if(!swinging){
-        swinging=true;
-        swingTime=0;
+    if(!sword.swinging){
+        sword.swinging=true;
+        sword.timer=0;
+        sword.angle=-0.8;
     }
-}
+};
 
 function hitEnemy(){
-    if(enemy.hp<=0)return;
 
-    let swordTipX=220+Math.cos(swordAngle)*180;
-    let swordTipY=350+Math.sin(swordAngle)*180;
+    let tipX=player.x+Math.cos(sword.angle)*170;
+    let tipY=player.y-35+Math.sin(sword.angle)*170;
 
     if(
-        swordTipX>enemy.x &&
-        swordTipX<enemy.x+enemy.w &&
-        swordTipY>enemy.y &&
-        swordTipY<enemy.y+enemy.h
+        tipX>enemy.x &&
+        tipX<enemy.x+enemy.w &&
+        tipY>enemy.y &&
+        tipY<enemy.y+enemy.h &&
+        enemy.hp>0
     ){
-        enemy.hp-=10;
-        enemy.flash=10;
-        enemy.x+=20;
 
-        for(let i=0;i<20;i++){
+        enemy.hp-=10;
+        enemy.flash=6;
+        enemy.x+=25;
+
+        cry.currentTime=0;
+        cry.play();
+
+        for(let i=0;i<25;i++){
             particles.push({
-                x:swordTipX,
-                y:swordTipY,
-                vx:(Math.random()-0.5)*8,
-                vy:(Math.random()-0.5)*8,
+                x:tipX,
+                y:tipY,
+                vx:(Math.random()-0.5)*10,
+                vy:(Math.random()-0.5)*10,
                 life:40
             });
         }
@@ -80,17 +120,25 @@ function hitEnemy(){
 
 function update(){
 
-    if(swinging){
-        swingTime++;
+    if(keys["w"]) player.y-=player.speed;
+    if(keys["s"]) player.y+=player.speed;
+    if(keys["a"]) player.x-=player.speed;
+    if(keys["d"]) player.x+=player.speed;
 
-        swordAngle+=0.23;
+    player.x=Math.max(20,Math.min(canvas.width-20,player.x));
+    player.y=Math.max(100,Math.min(canvas.height-20,player.y));
 
-        if(swingTime==4)
+    if(sword.swinging){
+
+        sword.timer++;
+        sword.angle+=0.28;
+
+        if(sword.timer==4)
             hitEnemy();
 
-        if(swingTime>10){
-            swinging=false;
-            swordAngle=-1.2;
+        if(sword.timer>10){
+            sword.swinging=false;
+            sword.angle=-0.8;
         }
     }
 
@@ -100,7 +148,7 @@ function update(){
     particles.forEach(p=>{
         p.x+=p.vx;
         p.y+=p.vy;
-        p.vy+=0.2;
+        p.vy+=0.3;
         p.life--;
     });
 
@@ -109,26 +157,25 @@ function update(){
 
 function draw(){
 
-    ctx.clearRect(0,0,1000,600);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    ctx.fillStyle="#58a83f";
-    ctx.fillRect(0,500,1000,100);
+    ctx.fillStyle="#45a049";
+    ctx.fillRect(0,620,canvas.width,80);
 
     // player
-
-    ctx.fillStyle="#333";
-    ctx.fillRect(120,280,40,150);
+    ctx.fillStyle="#222";
+    ctx.fillRect(player.x-20,player.y-70,40,70);
 
     ctx.save();
 
-    ctx.translate(140,340);
-    ctx.rotate(swordAngle);
+    ctx.translate(player.x,player.y-35);
+    ctx.rotate(sword.angle);
 
-    ctx.fillStyle="silver";
-    ctx.fillRect(0,-6,170,12);
+    ctx.fillStyle="#bfbfbf";
+    ctx.fillRect(0,-5,170,10);
 
-    ctx.fillStyle="#654321";
-    ctx.fillRect(-15,-10,20,20);
+    ctx.fillStyle="#6b3d16";
+    ctx.fillRect(-12,-10,16,20);
 
     ctx.restore();
 
@@ -136,31 +183,33 @@ function draw(){
 
     if(enemy.hp>0){
 
-        if(enemy.flash%2)
-            ctx.filter="brightness(2) sepia(1) saturate(10) hue-rotate(-40deg)";
+        if(enemy.flash)
+            ctx.filter="brightness(1.8) hue-rotate(-40deg)";
         else
             ctx.filter="none";
 
-        ctx.drawImage(enemyImg,enemy.x,enemy.y,enemy.w,enemy.h);
+        ctx.drawImage(derpy,enemy.x,enemy.y,enemy.w,enemy.h);
+
         ctx.filter="none";
 
         ctx.fillStyle="red";
-        ctx.fillRect(enemy.x,enemy.y-25,enemy.w,12);
+        ctx.fillRect(enemy.x,enemy.y-22,enemy.w,12);
 
         ctx.fillStyle="lime";
-        ctx.fillRect(enemy.x,enemy.y-25,enemy.w*(enemy.hp/100),12);
+        ctx.fillRect(enemy.x,enemy.y-22,enemy.w*(enemy.hp/100),12);
 
     }else{
 
         ctx.save();
-        ctx.translate(enemy.x+enemy.w/2,enemy.y+enemy.h/2);
+        ctx.translate(enemy.x+110,enemy.y+110);
         ctx.rotate(Math.PI/2);
-        ctx.drawImage(enemyImg,-enemy.w/2,-enemy.h/2,enemy.w,enemy.h);
+        ctx.drawImage(derpy,-110,-110,220,220);
         ctx.restore();
 
         ctx.fillStyle="white";
-        ctx.font="60px Arial";
-        ctx.fillText("YOU WIN",350,100);
+        ctx.font="70px Arial";
+        ctx.fillText("YOU WIN",430,120);
+
     }
 
     particles.forEach(p=>{
@@ -178,7 +227,8 @@ function loop(){
     requestAnimationFrame(loop);
 }
 
-enemyImg.onload=loop;
+derpy.onload=loop;
+
 </script>
 
 </body>
