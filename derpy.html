@@ -1,75 +1,185 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>I Hate This Guy</title>
+<title>Hit Him</title>
 <style>
 body{
     margin:0;
-    background:#1e1f22;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+    background:#222;
     overflow:hidden;
-    font-family:Arial, sans-serif;
+    font-family:Arial;
 }
-
-.container{
-    position:relative;
-    display:inline-block;
-}
-
-.container img{
+canvas{
     display:block;
-    max-width:100%;
-    height:auto;
-}
-
-.label{
-    position:absolute;
-    top:20px;
-    left:-340px;
-    color:#ff2a2a;
-    font-size:54px;
-    font-weight:900;
-    white-space:nowrap;
-    text-shadow:3px 3px 8px #000;
-}
-
-.arrow{
-    position:absolute;
-    top:55px;
-    left:210px;
-    width:210px;
-    height:8px;
-    background:#ff2a2a;
-    transform:rotate(15deg);
-    transform-origin:left center;
-}
-
-.arrow::after{
-    content:"";
-    position:absolute;
-    right:-2px;
-    top:-8px;
-    border-left:22px solid #ff2a2a;
-    border-top:12px solid transparent;
-    border-bottom:12px solid transparent;
+    margin:auto;
+    background:#6cb7ff;
 }
 </style>
 </head>
 <body>
 
-<div class="container">
-    <!-- Replace with your screenshot filename -->
-    <img src="discord-profile.png" alt="Discord Profile">
+<canvas id="game" width="1000" height="600"></canvas>
 
-    <div class="label">
-        I HATE THIS GUY
-        <div class="arrow"></div>
-    </div>
-</div>
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+const enemyImg=new Image();
+enemyImg.src="derpy.png";
+
+let enemy={
+    x:650,
+    y:300,
+    w:220,
+    h:220,
+    hp:100,
+    flash:0
+};
+
+let swordAngle=-1.2;
+let swinging=false;
+let swingTime=0;
+
+let particles=[];
+
+canvas.onclick=()=>{
+    if(!swinging){
+        swinging=true;
+        swingTime=0;
+    }
+}
+
+function hitEnemy(){
+    if(enemy.hp<=0)return;
+
+    let swordTipX=220+Math.cos(swordAngle)*180;
+    let swordTipY=350+Math.sin(swordAngle)*180;
+
+    if(
+        swordTipX>enemy.x &&
+        swordTipX<enemy.x+enemy.w &&
+        swordTipY>enemy.y &&
+        swordTipY<enemy.y+enemy.h
+    ){
+        enemy.hp-=10;
+        enemy.flash=10;
+        enemy.x+=20;
+
+        for(let i=0;i<20;i++){
+            particles.push({
+                x:swordTipX,
+                y:swordTipY,
+                vx:(Math.random()-0.5)*8,
+                vy:(Math.random()-0.5)*8,
+                life:40
+            });
+        }
+    }
+}
+
+function update(){
+
+    if(swinging){
+        swingTime++;
+
+        swordAngle+=0.23;
+
+        if(swingTime==4)
+            hitEnemy();
+
+        if(swingTime>10){
+            swinging=false;
+            swordAngle=-1.2;
+        }
+    }
+
+    if(enemy.flash>0)
+        enemy.flash--;
+
+    particles.forEach(p=>{
+        p.x+=p.vx;
+        p.y+=p.vy;
+        p.vy+=0.2;
+        p.life--;
+    });
+
+    particles=particles.filter(p=>p.life>0);
+}
+
+function draw(){
+
+    ctx.clearRect(0,0,1000,600);
+
+    ctx.fillStyle="#58a83f";
+    ctx.fillRect(0,500,1000,100);
+
+    // player
+
+    ctx.fillStyle="#333";
+    ctx.fillRect(120,280,40,150);
+
+    ctx.save();
+
+    ctx.translate(140,340);
+    ctx.rotate(swordAngle);
+
+    ctx.fillStyle="silver";
+    ctx.fillRect(0,-6,170,12);
+
+    ctx.fillStyle="#654321";
+    ctx.fillRect(-15,-10,20,20);
+
+    ctx.restore();
+
+    // enemy
+
+    if(enemy.hp>0){
+
+        if(enemy.flash%2)
+            ctx.filter="brightness(2) sepia(1) saturate(10) hue-rotate(-40deg)";
+        else
+            ctx.filter="none";
+
+        ctx.drawImage(enemyImg,enemy.x,enemy.y,enemy.w,enemy.h);
+        ctx.filter="none";
+
+        ctx.fillStyle="red";
+        ctx.fillRect(enemy.x,enemy.y-25,enemy.w,12);
+
+        ctx.fillStyle="lime";
+        ctx.fillRect(enemy.x,enemy.y-25,enemy.w*(enemy.hp/100),12);
+
+    }else{
+
+        ctx.save();
+        ctx.translate(enemy.x+enemy.w/2,enemy.y+enemy.h/2);
+        ctx.rotate(Math.PI/2);
+        ctx.drawImage(enemyImg,-enemy.w/2,-enemy.h/2,enemy.w,enemy.h);
+        ctx.restore();
+
+        ctx.fillStyle="white";
+        ctx.font="60px Arial";
+        ctx.fillText("YOU WIN",350,100);
+    }
+
+    particles.forEach(p=>{
+        ctx.fillStyle="red";
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,4,0,Math.PI*2);
+        ctx.fill();
+    });
+
+}
+
+function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+enemyImg.onload=loop;
+</script>
 
 </body>
 </html>
